@@ -11,8 +11,8 @@
 2. Klikkaa **New repository**  
 3. Anna nimi esim. `Oma-DiaBalance-Back`  
 4. **Valitse `Private` tai `Public`**  
-5. **Valitse `Add a README file`** ✅  
-6. **Valitse `.gitignore` ja valitse sieltä `Node`** ✅  
+5. **Valitse `Add a README file`** 
+6. **Valitse `.gitignore` ja valitse sieltä `Node`** 
 7. **Älä valitse lisenssiä**  
 8. Paina **Create repository**  
 9. Kopioi repositoryn URL
@@ -165,5 +165,5 @@ http://localhost:3000/
 
 ---
 
-**Onneksi olkoon!** Backend-palvelimesi on nyt alustettu ja käynnissä. 🚀
+**Onneksi olkoon!** Backend-palvelimesi on nyt alustettu ja käynnissä.
 
