@@ -152,7 +152,7 @@ git push origin main
 
 ---
 
-## 9️⃣ Käynnistä kehitysympäristö  
+## Käynnistä kehitysympäristö  
 Aja palvelin kehitystilassa:
 ```bash
 npm run dev
@@ -166,4 +166,40 @@ http://localhost:3000/
 ---
 
 **Onneksi olkoon!** Backend-palvelimesi on nyt alustettu ja käynnissä.
+
+## Aletaan tekemään tietokantaa ja tietokanta tauluja
+Asenna paketit
+```bash
+npm run install mysql2 dotenv
+```
+
+Luo kansio db ja sen sisälle tietokantasi nimi esim `diabalance.sql`
+
+Luo kansio utils jonka sisään tiedosto `database.js`
+laita sinne sisälle
+```javascript
+import mysql from 'mysql2';
+import 'dotenv/config';
+const pool = mysql.createPool({
+host: process.env.DB_HOST,
+user: process.env.DB_USER,
+password: process.env.DB_PASSWORD,
+database: process.env.DB_NAME,
+waitForConnections: true,
+connectionLimit: 10,
+queueLimit: 0,
+});
+const promisePool = pool.promise();
+export default promisePool;
+```
+
+* **Luo** `.env`-tiedosto ja lisää tietokantayhteydet, lisää kohtiin omat tietosi:
+
+```
+DB_HOST=localhost 
+DB_USER=root
+DB_PASSWORD=salasana
+DB_NAME=tietokantasi nimi
+```
+**HUOM** Laita `.env` tiedosto `.gitignore` tiedostoon
 
