@@ -203,3 +203,86 @@ DB_NAME=tietokantasi nimi
 ```
 **HUOM** Laita `.env` tiedosto `.gitignore` tiedostoon
 
+Kun tietokantatalut on luotu `.sql` kansioon, niin voit käynnistää tietokannan. kopio polku mySQL terminaaliin. Laita source <ja tähän polku>
+Nyt voit katsoa tuliko tietokanta:
+```SQL
+show databases;
+```
+```SQL
+desc potila_hoitaja;
+```
+
+# CONSTRAINT selitettynä yksinkertaisesti
+
+CONSTRAINT (rajoite) on SQL-tietokannoissa sääntö, joka varmistaa tietojen oikeellisuuden ja eheyden. Se on kuin vartija, joka tarkistaa, että kaikki tietokantaan menevä tai sieltä muuttuva tieto noudattaa tiettyjä sääntöjä.
+
+## Eri CONSTRAINT-tyypit:
+
+1. **PRIMARY KEY** - Määrittelee taulun pääavaimen, jonka avulla jokainen rivi voidaan yksilöidä.
+   ```sql
+   PRIMARY KEY (kayttaja_id)
+   ```
+
+2. **FOREIGN KEY** - Luo yhteyden kahden taulun välille ja varmistaa viite-eheyden.
+   ```sql
+   FOREIGN KEY (kayttaja_id) REFERENCES user(kayttaja_id)
+   ```
+
+3. **UNIQUE** - Varmistaa, että kentän arvot ovat ainutlaatuisia.
+   ```sql
+   UNIQUE (kayttajanimi)
+   ```
+
+4. **NOT NULL** - Varmistaa, että kenttä ei voi olla tyhjä.
+   ```sql
+   kayttajanimi VARCHAR(40) NOT NULL
+   ```
+
+5. **CHECK** - Tarkistaa, että kenttä täyttää tietyn ehdon.
+   ```sql
+   CHECK (kayttajarooli IN (1, 2))
+   ```
+
+## Nimetyn ja nimettömän CONSTRAINT:n ero:
+
+Kun määrittelet viiteavaimen (FOREIGN KEY), voit tehdä sen kahdella tavalla:
+
+### 1. Nimetön CONSTRAINT:
+```sql
+FOREIGN KEY (kayttaja_id) REFERENCES user(kayttaja_id)
+```
+
+### 2. Nimetty CONSTRAINT:
+```sql
+CONSTRAINT FK_kirjaus_kayttaja FOREIGN KEY (kayttaja_id) REFERENCES user(kayttaja_id)
+```
+
+**Ero on siinä, että**:
+- Nimetyssä versiossa annat rajoitteelle nimen (FK_kirjaus_kayttaja)
+- Nimettömässä versiossa tietokantajärjestelmä luo automaattisesti nimen
+
+## Käytännön hyödyt nimetystä CONSTRAINT:sta:
+
+1. **Selkeämmät virheilmoitukset**: Jos yrität lisätä rivin, joka rikkoo rajoitetta, virheilmoituksessa näkyy rajoitteen nimi.
+
+2. **Helpompi muokkaaminen**: Jos haluat myöhemmin muokata tai poistaa rajoitetta, voit viitata siihen suoraan nimellä:
+   ```sql
+   ALTER TABLE kirjaus DROP CONSTRAINT FK_kirjaus_kayttaja;
+   ```
+
+3. **Dokumentaatio**: Nimi kertoo, mitä rajoite tekee ja mihin tauluihin se liittyy.
+
+## Esimerkki virheilmoituksesta:
+
+**Nimetty CONSTRAINT**:
+```
+Error: Violation of CONSTRAINT 'FK_kirjaus_kayttaja': Cannot add entry for patient ID 123 because the user does not exist
+```
+
+**Nimetön CONSTRAINT**:
+```
+Error: Violation of FOREIGN KEY constraint on table 'kirjaus': Cannot add entry...
+```
+
+Molemmat tavat tekevät teknisesti täsmälleen saman asian tietokannassa, mutta nimetty versio helpottaa ylläpitoa ja virheiden selvittelyä, erityisesti kun tietokanta kasvaa suuremmaksi.
+

@@ -1,3 +1,6 @@
+
+-- source C:\Users\suviw\Desktop\developer\OMA-DiaBalance-Back\db\diabalance.sql
+
 DROP DATABASE IF EXISTS diabalance_db;
 CREATE DATABASE diabalance_db;
 USE diabalance_db;
