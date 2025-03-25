@@ -1,10 +1,11 @@
 import { 
-    selectAllUsers, 
-    selectUserById, 
-    insertUser, 
+    getAllUsers, 
+    getUserById, 
+    insertUser,
+    getUserByUsername,
     deleteUserById, 
-    updateUserById,
-    selectUserByUserName
+    updateUser,
+    login
   } from '../models/user-model.js';
   import bcrypt from 'bcryptjs';
   import { customError } from '../middlewares/error-handler.js';
@@ -14,7 +15,7 @@ import {
   // Kaikkien käyttäjien hakeminen
   const getUsers = async (req, res, next) => {
     try {
-      const users = await selectAllUsers();
+      const users = await getAllUsers();
       res.json(users);
     } catch (error) {
       next(error);
@@ -42,58 +43,46 @@ import {
       return next(customError(error.message, 400));
     }
   };
+  const userLogin = async (req, res, next) => {
+
+    console.log('userLogin:',  req.body)
   
-  // Kirjautuminen
-  const login = async (req, res, next) => {
-    console.log('login request body:', req.body);
-    try {
-      const { kayttajanimi, salasana } = req.body;
-      
-      if (!kayttajanimi || !salasana) {
-        return next(customError('Käyttäjänimi ja salasana vaaditaan', 400));
-      }
-      
-      // Haetaan käyttäjä tietokannasta
-      const user = await selectUserByUserName(kayttajanimi);
-      if (!user) {
-        return next(customError('Virheellinen käyttäjänimi tai salasana', 401));
-      }
-      
-      // Tarkistetaan salasana
-      const isPasswordValid = await bcrypt.compare(salasana, user.salasana);
-      if (!isPasswordValid) {
-        return next(customError('Virheellinen käyttäjänimi tai salasana', 401));
-      }
-      
-      // Luodaan token
-      const token = jwt.sign(
-        { 
-          kayttaja_id: user.kayttaja_id, 
-          kayttajanimi: user.kayttajanimi,
-          kayttajarooli: user.kayttajarooli 
-        }, 
-        process.env.JWT_SECRET, 
-        { expiresIn: '24h' }
-      );
-      
-      // Poistetaan salasana vastauksesta
-      const { salasana: pwd, ...userWithoutPassword } = user;
-      
-      res.json({
-        ...userWithoutPassword,
-        token
-      });
-    } catch (error) {
-      next(error);
+    const kayttajanimi = req.body.kayttajanimi;
+    const salasana = req.body.salasana;
+  
+    //jos username tai password puuttuu, tulee viesti
+    if (!kayttajanimi || !salasana) {
+      return next(customError('käyttäjänimi tai salasana puuttuu', 400));
     }
+  
+    const user = await getUserByUsername(kayttajanimi);
+
+  
+    if (user) {
+      const match = await bcrypt.compare(salasana, user.salasana);
+      if (match) {
+        const token = jwt.sign({
+          kayttaja_id: user.kayttaja_id,
+          kayttajarooli: user.kayttajarooli
+        }, process.env.JWT_SECRET, {expiresIn: process.env.JWT_EXPIRES_IN,});
+        delete user.password;
+        console.log('user is found', user);
+  
+        return res.json({message: 'Käyttäjä löytyy ja tiedot ovat oikein', user, token});
+        
+      }
+    }
+      next (customError('Bad username/password', 401));
   };
+  
+  
   
   // Hae käyttäjä ID:n perusteella
   const findUserById = async (req, res, next) => {
     console.log('findUserById request params:', req.params.id);
     
     try {
-      const user = await selectUserById(req.params.id);
+      const user = await getUserById(req.params.id);
   
       if (user) {
         res.json(user);
@@ -110,8 +99,8 @@ import {
     try {
       console.log('deleteUser', req.params.id);
       
-      // Tarkistetaan oikeudet - käyttäjä voi poistaa vain oman tilinsä
-      if (req.user.kayttaja_id !== parseInt(req.params.id) && req.user.kayttajarooli !== 2) {
+      // Tarkistetaan oikeudet - ylläpitäjä voi poistaa vain tilit
+      if (req.user.kayttaja_id !== parseInt(req.params.id) && req.user.kayttajarooli !== 3) {
         return next(customError('Ei käyttöoikeutta', 403));
       }
   
@@ -123,6 +112,8 @@ import {
   };
   
   // Käyttäjän tietojen muokkaus ID:n perusteella
+  // Potilas voi muokata omaa profiiliaan
+  // Hoidonseuraaja voi muokata omaa tai potilaiden profiileja
   const editUser = async (req, res, next) => {
     console.log('editUser request body', req.body);
   
@@ -146,7 +137,7 @@ import {
       }
   
       // Päivitetään tiedot tietokantaan
-      const result = await updateUserById(userIdFromParams, { 
+      const result = await updateUser(userIdFromParams, { 
         kayttajanimi, 
         salasana: hashedPassword, 
         kayttajarooli 
@@ -165,7 +156,7 @@ import {
   export { 
     getUsers, 
     addUser, 
-    login,
+    userLogin,
     findUserById, 
     deleteUser, 
     editUser 

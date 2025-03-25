@@ -38,21 +38,43 @@ CREATE TABLE kirjaus (
 
 -- Potilas-hoitaja suhdetaulu
 CREATE TABLE potilas_hoitaja (
-    hoidonseujaaja INT(10) NOT NULL,
+    hoidonseuraaja INT(10) NOT NULL,
     potilas INT(10) NOT NULL,
-    PRIMARY KEY (hoidonseujaaja, potilas),
-    CONSTRAINT FK1_potilas_hoitaja FOREIGN KEY (hoidonseujaaja) REFERENCES user(kayttaja_id),
+    PRIMARY KEY (hoidonseuraaja, potilas),
+    CONSTRAINT FK1_potilas_hoitaja FOREIGN KEY (hoidonseuraaja) REFERENCES user(kayttaja_id),
     CONSTRAINT FK2_potilas_hoitaja FOREIGN KEY (potilas) REFERENCES user(kayttaja_id)
 );
 
 -- Ajanvaraustaulu
 CREATE TABLE ajanvaraus (
-    hoidonseujaaja INT(10) NOT NULL,
+    hoidonseuraaja INT(10) NOT NULL,
     potilas INT(10) NOT NULL,
     ajanvaraus_pvm DATE NOT NULL,
     ajanvaraus_aloitus TIME,
     ajanvaraus_lopetus TIME,
-    PRIMARY KEY (hoidonseujaaja, potilas, ajanvaraus_pvm),
-    CONSTRAINT FK1_ajanvaraus FOREIGN KEY (hoidonseujaaja) REFERENCES user(kayttaja_id),
+    PRIMARY KEY (hoidonseuraaja, potilas, ajanvaraus_pvm),
+    CONSTRAINT FK1_ajanvaraus FOREIGN KEY (hoidonseuraaja) REFERENCES user(kayttaja_id),
     CONSTRAINT FK2_ajanvaraus FOREIGN KEY (potilas) REFERENCES user(kayttaja_id)
 );
+
+-- Lisätään testikäyttäjät (1 potilas, 1 hoidonseuraaja)
+-- Salasana 'potilas123' hashattu versio
+INSERT INTO user (kayttajanimi, salasana, kayttajarooli) 
+VALUES ('testipotilas', '$2y$10$abcdefghijklmnopqrstu.vwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', 1);
+
+-- Salasana 'hoitaja123' hashattu versio
+INSERT INTO user (kayttajanimi, salasana, kayttajarooli) 
+VALUES ('testihoitaja', '$2y$10$abcdefghijklmnopqrstu.vwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', 2);
+
+-- Luodaan potilas-hoitaja suhde
+-- Oletetaan että potilas sai ID:n 1 ja hoitaja ID:n 2
+INSERT INTO potilas_hoitaja (hoidonseuraaja, potilas) 
+VALUES (2, 1);
+
+-- Lisätään yksi kirjaus potilaan mittaustiedoista
+INSERT INTO kirjaus (pvm, kayttaja_id, vs_aamu, vs_ilta, oireet, kommentti) 
+VALUES ('2025-03-25', 1, 7.2, 6.8, 'Hieman väsymystä', 'Päivä sujui muuten hyvin');
+
+-- Lisätään yksi ajanvaraus
+INSERT INTO ajanvaraus (hoidonseuraaja, potilas, ajanvaraus_pvm, ajanvaraus_aloitus, ajanvaraus_lopetus) 
+VALUES (2, 1, '2025-04-15', '13:00:00', '13:30:00');

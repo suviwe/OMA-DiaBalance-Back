@@ -1,13 +1,24 @@
 import promisePool from '../utils/database.js';
 
+// Käyttäjäroolit
+const ROOLI = {
+  POTILAS: 1,
+  HOIDONSEURAAJA: 2,
+  ADMIN: 3
+};
+
 /**
  * Hae kaikki käyttäjät tietokannasta
  * @returns {Array} kaikki käyttäjät
  */
-const selectAllUsers = async () => {
-  const [rows] = await promisePool.query('SELECT kayttaja_id, kayttajanimi, kayttajarooli FROM user');
-  console.log('selectAllUsers result', rows);
-  return rows;
+const getAllUsers = async () => {
+  try {
+    const [rows] = await promisePool.query('SELECT * FROM user');
+    return rows;
+  } catch (error) {
+    console.error('Error getAllUsers:', error);
+    throw new Error('Database error');
+  }
 };
 
 /**
@@ -15,17 +26,22 @@ const selectAllUsers = async () => {
  * @param {number} userId
  * @returns {Object} käyttäjätiedot
  */
-const selectUserById = async (userId) => {
-  const [rows] = await promisePool.query(
-    'SELECT kayttaja_id, kayttajanimi, kayttajarooli FROM user WHERE kayttaja_id = ?',
-    [userId]
-  );
-  return rows[0];
+const getUserById = async (userId) => {
+  try {
+    const [rows] = await promisePool.query(
+      'SELECT kayttaja_id, kayttajanimi, kayttajarooli FROM user WHERE kayttaja_id = ?',
+      [userId]
+    );
+    return rows[0];
+  } catch (error) {
+    console.error('Error getUserById:', error);
+    throw new Error('Database error');
+  }
 };
 
 /**
  * Lisää uusi käyttäjä
- * @param {Object} user käyttäjätiedot
+ * @param {Object} user käyttäjätiedot (kayttajanimi, salasana, kayttajarooli)
  * @returns {number} lisätyn käyttäjän ID
  */
 const insertUser = async (user) => {
@@ -34,29 +50,9 @@ const insertUser = async (user) => {
       'INSERT INTO user (kayttajanimi, salasana, kayttajarooli) VALUES (?, ?, ?)',
       [user.kayttajanimi, user.salasana, user.kayttajarooli]
     );
-    console.log('insertUser result', result);
     return result.insertId;
   } catch (error) {
     console.error('Error insertUser:', error);
-    throw new Error('Database error');
-  }
-};
-
-/**
- * Hae käyttäjä käyttäjänimen ja salasanan perusteella (kirjautumista varten)
- * @param {string} kayttajanimi
- * @param {string} salasana
- * @returns {Object} käyttäjätiedot
- */
-const selectUserByNameAndPassword = async (kayttajanimi, salasana) => {
-  try {
-    const [rows] = await promisePool.query(
-      'SELECT kayttaja_id, kayttajanimi, kayttajarooli FROM user WHERE kayttajanimi = ? AND salasana = ?',
-      [kayttajanimi, salasana]
-    );
-    return rows[0];
-  } catch (error) {
-    console.error('Error selectUserByNameAndPassword:', error);
     throw new Error('Database error');
   }
 };
@@ -66,7 +62,7 @@ const selectUserByNameAndPassword = async (kayttajanimi, salasana) => {
  * @param {string} kayttajanimi
  * @returns {Object} käyttäjätiedot
  */
-const selectUserByUserName = async (kayttajanimi) => {
+const getUserByUsername = async (kayttajanimi) => {
   try {
     const [rows] = await promisePool.query(
       'SELECT kayttaja_id, kayttajanimi, salasana, kayttajarooli FROM user WHERE kayttajanimi = ?',
@@ -74,50 +70,54 @@ const selectUserByUserName = async (kayttajanimi) => {
     );
     return rows[0];
   } catch (error) {
-    console.error('Error selectUserByUserName:', error);
+    console.error('Error getUserByUsername:', error);
     throw new Error('Database error');
   }
 };
 
 /**
- * Poista käyttäjä ID:n perusteella
- * @param {number} userId
- * @returns {Object} tulosviesti
+ * Kirjaudu sisään käyttäjänimen ja salasanan perusteella
+ * @param {string} kayttajanimi
+ * @param {string} salasana
+ * @returns {Object} käyttäjätiedot
  */
-const deleteUserById = async (userId) => {
+const login = async (kayttajanimi) => {
   try {
-    await promisePool.query('DELETE FROM user WHERE kayttaja_id = ?', [userId]);
-    return { message: 'Käyttäjä poistettu' };
+    const [rows] = await promisePool.query(
+      'SELECT kayttaja_id, kayttajanimi, kayttajarooli FROM user WHERE kayttajanimi = ?',
+      [kayttajanimi]
+    );
+    return rows[0];
   } catch (error) {
-    console.error('Error deleteUserById:', error);
-    return { error: error.message };
+    console.error('Error login:', error);
+    throw new Error('Database error');
   }
 };
 
 /**
- * Päivitä käyttäjän tiedot ID:n perusteella
+ * Päivitä käyttäjän tiedot
  * @param {number} userId
- * @param {Object} user päivitettävät tiedot
+ * @param {Object} userData päivitettävät tiedot
  * @returns {Object} tulosviesti
  */
-const updateUserById = async (userId, { kayttajanimi, salasana, kayttajarooli }) => {
+const updateUser = async (userId, userData) => {
   try {
     let updateFields = [];
     let values = [];
 
-    if (kayttajanimi) {
+    if (userData.kayttajanimi) {
       updateFields.push('kayttajanimi = ?');
-      values.push(kayttajanimi);
+      values.push(userData.kayttajanimi);
     }
 
-    if (salasana) {
+    if (userData.salasana) {
       updateFields.push('salasana = ?');
-      values.push(salasana);
+      values.push(userData.salasana);
     }
 
-    if (kayttajarooli !== undefined) {
+    if (userData.kayttajarooli !== undefined) {
       updateFields.push('kayttajarooli = ?');
-      values.push(kayttajarooli);
+      values.push(userData.kayttajarooli);
     }
 
     if (updateFields.length === 0) {
@@ -130,19 +130,46 @@ const updateUserById = async (userId, { kayttajanimi, salasana, kayttajarooli })
       'UPDATE user SET ' + updateFields.join(', ') + ' WHERE kayttaja_id = ?',
       values
     );
-    return { message: 'Käyttäjätietoja päivitetty', result };
+    
+    return { 
+      message: 'Käyttäjätietoja päivitetty', 
+      affected: result.affectedRows 
+    };
   } catch (error) {
-    console.error('Error updateUserById:', error);
+    console.error('Error updateUser:', error);
+    return { error: 'Database error' };
+  }
+};
+
+/**
+ * Poista käyttäjä
+ * @param {number} userId
+ * @returns {Object} tulosviesti
+ */
+const deleteUserById = async (userId) => {
+  try {
+    const [result] = await promisePool.query(
+      'DELETE FROM user WHERE kayttaja_id = ?',
+      [userId]
+    );
+    
+    return { 
+      message: 'Käyttäjä poistettu', 
+      affected: result.affectedRows 
+    };
+  } catch (error) {
+    console.error('Error deleteUser:', error);
     return { error: 'Database error' };
   }
 };
 
 export {
-  selectAllUsers,
-  selectUserById,
+  ROOLI,
+  getAllUsers,
+  getUserById,
   insertUser,
-  selectUserByNameAndPassword,
-  deleteUserById,
-  selectUserByUserName,
-  updateUserById
+  getUserByUsername,
+  login,
+  updateUser,
+  deleteUserById
 };
