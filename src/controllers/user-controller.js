@@ -141,6 +141,7 @@ import {
       if (salasana) {
         const salt = await bcrypt.genSalt(10);
         hashedPassword = await bcrypt.hash(salasana, salt);
+        console.log('Hashattu salasana:', hashedPassword);
       }
   
       // Päivitetään tiedot tietokantaan
