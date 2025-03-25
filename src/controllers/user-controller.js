@@ -22,29 +22,33 @@ import {
     }
   };
   
-  // Lisää käyttäjä
+  // Lisää käyttäjä, käyttäjän rekisteröinti
   const addUser = async (req, res, next) => {
     console.log('addUser request body:', req.body);
   
     try {
-      // Salasanan salaus
+      // Salasanan salaus ja sitten hashataan käyttäjän syöttämä salasana jolloin salasana tallennetaan turvallisesti
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(req.body.salasana, salt);
       
+      //tehdään uusi käyttäjäobjekti
       const newUser = {
         kayttajanimi: req.body.kayttajanimi,
         salasana: hashedPassword,
         kayttajarooli: req.body.kayttajarooli
       };
       
+      //käytetään insertUser funktiota lisätäksemme uusi käyttäjä
       const result = await insertUser(newUser);
       res.status(201).json({message: 'Käyttäjä lisätty. id: ' + result});
+      //jos tapahtuu virhe, esim dublictate, se siirretään error-middlewareen
     } catch (error) {
       return next(customError(error.message, 400));
     }
   };
-  const userLogin = async (req, res, next) => {
 
+  const userLogin = async (req, res, next) => {
+    //näyttää mitä käyttäjä syötti
     console.log('userLogin:',  req.body)
   
     const kayttajanimi = req.body.kayttajanimi;
@@ -54,18 +58,21 @@ import {
     if (!kayttajanimi || !salasana) {
       return next(customError('käyttäjänimi tai salasana puuttuu', 400));
     }
-  
+    //haetaan käyttäjä tietokannasta käyttäjänimen perusteella
     const user = await getUserByUsername(kayttajanimi);
 
-  
+    //jos käyttäjä löytyy, verrataan salasanaa hashattuun salasanaan
     if (user) {
       const match = await bcrypt.compare(salasana, user.salasana);
+      //jos salasana on oikein, luodaan token ja siihen sisällytetään käyttäjän id ja rooli
       if (match) {
         const token = jwt.sign({
           kayttaja_id: user.kayttaja_id,
           kayttajarooli: user.kayttajarooli
         }, process.env.JWT_SECRET, {expiresIn: process.env.JWT_EXPIRES_IN,});
-        delete user.password;
+
+        //poistetaan salasana vastauksesta turvallisuussyistä
+        delete user.salasana;
         console.log('user is found', user);
   
         return res.json({message: 'Käyttäjä löytyy ja tiedot ovat oikein', user, token});
@@ -99,7 +106,7 @@ import {
     try {
       console.log('deleteUser', req.params.id);
       
-      // Tarkistetaan oikeudet - ylläpitäjä voi poistaa vain tilit
+      // Tarkistetaan oikeudet - ylläpitäjä voi poistaa vain tilit, sekä käyttäjä voi poistaa oman tilinsä
       if (req.user.kayttaja_id !== parseInt(req.params.id) && req.user.kayttajarooli !== 3) {
         return next(customError('Ei käyttöoikeutta', 403));
       }

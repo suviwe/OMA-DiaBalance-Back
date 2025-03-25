@@ -286,3 +286,56 @@ Error: Violation of FOREIGN KEY constraint on table 'kirjaus': Cannot add entry.
 
 Molemmat tavat tekevät teknisesti täsmälleen saman asian tietokannassa, mutta nimetty versio helpottaa ylläpitoa ja virheiden selvittelyä, erityisesti kun tietokanta kasvaa suuremmaksi.
 
+
+
+## DiaBalance Backend – Käyttäjähallinnan toteutus
+
+### Autentikointi
+
+- **Rekisteröityminen**: POST /api/users
+  - Validointi: käyttäjänimi & salasana
+  - Salasanan hashays bcryptillä
+
+- **Kirjautuminen**: POST /api/users/login
+  - Varmistaa käyttäjänimen ja salasanan oikeellisuuden
+  - Palauttaa JWT-tokenin
+  - Tokenin voimassaoloaika: 24h (`JWT_EXPIRES_IN`)
+
+- **Uloskirjautuminen**
+  - Hoidetaan frontendissä poistamalla token (`localStorage.removeItem('token')`)
+
+---
+
+### Auktorisointi
+
+- **Tokenin tarkistus**: `authenticateToken` middleware
+- **Roolien tarkistus**
+  - `kayttajarooli`: 1 (diabeetikko), 2 (hoidonseuraaja), 3 (ylläpitäjä)
+  - Oikeuksien tarkistus eri reiteissä roolin perusteella
+  - Esimerkiksi:
+    - käyttäjä voi muokata vain omaa profiilia
+    - ylläpitäjä voi poistaa kenen tahansa tilin
+
+---
+
+### Käyttäjäprofiili
+
+- **GET /api/users/:id** – hakee käyttäjän tiedot
+- **PUT /api/users/:id** – muokkaa käyttäjän tietoja (vain oma tai jos rooli = 2)
+- **DELETE /api/users/:id** – poistaa käyttäjän tilin (oma tai ylläpitäjä)
+- **Salasanan vaihto** onnistuu samalla reitillä (hashataan uudelleen)
+
+---
+
+### Token
+
+- JWT luodaan kirjautuessa
+- Token sisältää:
+  - `kayttaja_id`
+  - `kayttajarooli`
+- Vanhenee automaattisesti 24h kuluttua
+- Ei refresh token -järjestelmää tällä hetkellä
+
+---
+**Tietokantarakenne ja -yhteys on tehty ja testattu toimivaksi. Backend-rajapinta tukee CRUD-toimintoja käyttäjille ja käyttää suoraan tietokantaa mallien kautta.**
+
